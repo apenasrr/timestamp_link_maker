@@ -1,6 +1,6 @@
 """
     Create by: apenasrr
-    Source: https://github.com/apenasrr/
+    Source: https://github.com/apenasrr/timestamp_link_maker
     
     Create automatic descriptions with a several timestamp link, 
     of a video composed by the joining of several small videos
@@ -200,13 +200,12 @@ def create_df_description_with_folder(df):
     # create column time_stamp_str
     df['time_stamp'] = pd.to_timedelta(df['time_stamp'], unit='D')
     df['time_stamp_str'] = df['time_stamp'].apply(timedelta_to_string)
-
     
     # creat list with cols folders names
     cols_folders_start = list(df.columns).index('time_stamp') + 1
     cols_folders_finish = list(df.columns).index('time_stamp_str')
     cols_folders = list(df.columns)[cols_folders_start:cols_folders_finish]
-
+    
     # TODO consolidate cols_folders in a unique column 
     
     # Of column file_name_origin remove extension
@@ -239,7 +238,9 @@ def create_df_description_with_folder(df):
         
         description = ''
         # list of folders origin from the output file
+        # TODO replace comment below
         col_folder = cols_folders[0]
+        # col_folder = cols_folders[1]
         list_folders = list(df_video_details[col_folder].unique())
         
         for index_folder, folder in enumerate(list_folders):
@@ -268,13 +269,15 @@ def create_df_description_with_folder(df):
         
 
 
-def implant_hashtag_blocks(df, keyword):
-    
+def implant_hashtag_blocks(df, keyword, add_num):
+            
     df = df.reset_index(drop=True)
     for index, row in df.iterrows():
         description = row['description']
+        counter = index+add_num
         df.loc[index, 'description'] = \
-            f'#{keyword}%02d\n\n{description}' % (index + 1)
+            f'#{keyword}{counter:03d}\n\n{description}'
+
     return df
     
     
@@ -291,27 +294,30 @@ def get_summary_mid_without_folder(df, keyword):
     return mid
     
     
+def create_summary(file_path_report_origin, folder_path_output, add_num):
     
-def create_summary():
+    folder_script_path_relative = os.path.dirname(__file__)
+    folder_script_path = os.path.realpath(folder_script_path_relative)
     
-    summary_top_content = get_txt_content(file_path='summary_top.txt')
+    file_path = os.path.join(folder_script_path, 'summary_top.txt')
+    summary_top_content = get_txt_content(file_path=file_path)
 
-    df = pd.read_excel('video_details.xlsx')
+    df = pd.read_excel(file_path_report_origin)
     df = include_cols_folders_structure(df)
 
-    # summary_mid_content = get_summary_mid_without_folder(df, keyword='Bloco')
-    summary_mid_content = get_summary_mid_with_folder(df, keyword='Bloco')
+    summary_mid_content = get_summary_mid_with_folder(df, keyword='Bloco', 
+                                                      add_num=add_num)
     
-    summary_bot_content = get_txt_content(file_path='summary_bot.txt')
+    file_path = os.path.join(folder_script_path, 'summary_bot.txt')
+    summary_bot_content = get_txt_content(file_path=file_path)
     
     summary_content = summary_top_content + '\n' + \
                       summary_mid_content + '\n' + \
                       summary_bot_content
     
-    create_txt(file_path='summary.txt', stringa=summary_content)
+    file_path = os.path.join(folder_path_output, 'summary.txt')
+    create_txt(file_path=file_path, stringa=summary_content)
     
-
-
     
 def get_txt_content(file_path):
     
@@ -329,24 +335,7 @@ def create_txt(file_path, stringa):
     f.close()
 
 
-def remove_root_folders(df, skip_cols):
-    
-    len_cols = len(df.columns)
-    list_n_col_to_delete = []
-    for n_col in range(skip_cols, len_cols-1):
-        serie = df.iloc[:, n_col]
-        # check for column with more than 1 unique value (folder root)
-        col_has_one_unique_value = check_col_unique_values(serie)
-        if col_has_one_unique_value:
-            name_col = df.columns[n_col]
-            list_n_col_to_delete.append(name_col)
-
-    df = df.drop(list_n_col_to_delete, axis=1)
-    
-    return df
-    
-
-def get_summary_mid_with_folder(df, keyword):
+def get_summary_mid_with_folder(df, keyword, add_num):
     """
     Create text marking the output files and informing the folder structure
         that originate each one
@@ -371,8 +360,10 @@ def get_summary_mid_with_folder(df, keyword):
             
             
             # they are to the right of the column 'file_output'
-            # col_qt = len(df_folder.columns)
-            col_number = list(df_folder.columns).index('file_output') + 1
+            # TODO uncoment line bellow
+            step_column = 1
+            # step_column = 2
+            col_number = list(df_folder.columns).index('file_output') + step_column
             # TODO iterate from col all cols of folders [col_number:]
             col_name = df_folder.columns[col_number]
             serie_file_folder = df_folder.loc[mask_file_output, col_name]
@@ -391,14 +382,15 @@ def get_summary_mid_with_folder(df, keyword):
         return dict_file_folder
 
     def get_summary_mid_content_with_folders(list_file_output, 
-                                             dict_file_folders):
+                                             dict_file_folders, add_num):
         
         mid = ''
-        for index, file_output in enumerate(list_file_output, 1):
+        for index, file_output in enumerate(list_file_output):
             list_folders = dict_file_folders[file_output]
             str_folders = '\n'.join(list_folders)
-            str_mark = f'#{keyword}%02d' % (index)
-            if index == 1:
+            index_hashtag = index + add_num
+            str_mark = f'#{keyword}%03d' % (index_hashtag)
+            if index == 0:
                 mid = str_folders + '\n' + str_mark
             else:
                 mid = mid + '\n\n' + str_folders + '\n' + str_mark
@@ -411,11 +403,38 @@ def get_summary_mid_with_folder(df, keyword):
     summary_mid_content = \
         get_summary_mid_content_with_folders(
             list_file_output=list_file_output, 
-            dict_file_folders=dict_file_folders)
+            dict_file_folders=dict_file_folders, add_num=add_num)
 
     return summary_mid_content
     
 
+def remove_root_folders(df, skip_cols):
+
+    def check_col_unique_values(serie):
+        
+        serie_unique = serie.drop_duplicates(keep='first')
+        list_unique_values = serie_unique.unique().tolist()
+        qt_unique_values = len(list_unique_values)
+        if qt_unique_values == 1:
+            return True
+        else:
+            return False
+    
+    len_cols = len(df.columns)
+    list_n_col_to_delete = []
+    for n_col in range(skip_cols, len_cols-1):
+        serie = df.iloc[:, n_col]
+        # check for column with more than 1 unique value (folder root)
+        col_has_one_unique_value = check_col_unique_values(serie)
+        if col_has_one_unique_value:
+            name_col = df.columns[n_col]
+            list_n_col_to_delete.append(name_col)
+
+    df = df.drop(list_n_col_to_delete, axis=1)
+    
+    return df
+    
+    
 def include_cols_folders_structure(df):
     """
     Includes to the right of the DataFrame, columns corresponding to each
@@ -431,21 +450,10 @@ def include_cols_folders_structure(df):
     
     return df_folder
 
-            
-def check_col_unique_values(serie):
-    
-    serie_unique = serie.drop_duplicates(keep='first')
-    list_unique_values = serie_unique.unique().tolist()
-    qt_unique_values = len(list_unique_values)
-    if qt_unique_values == 1:
-        return True
-    else:
-        return False
-        
 
-def get_df_source():
+def get_df_source(file_path_report_origin):
     
-    df_source = pd.read_excel('video_details.xlsx')
+    df_source = pd.read_excel(file_path_report_origin)
     
     list_columns_keep = ['file_folder', 'file_name', 'file_folder_origin', 
                          'file_name_origin', 'file_output']
@@ -453,9 +461,10 @@ def get_df_source():
     df = df_source.loc[:, list_columns_keep]
     
     return df
+
     
-    
-def main():
+def timestamp_link_maker(folder_path_output, file_path_report_origin, 
+                         start_index_number):
     """
     Requeriments: Spreadsheet named 'video_details.xlsx' with columns:
                     ['file_folder', 'file_name', 'file_folder_origin', 
@@ -477,25 +486,47 @@ def main():
         df['duration_new'] = df['file_path'].apply(get_duration_video)
         
         return df
-   
-    df = get_df_source()
+    
+    df = get_df_source(file_path_report_origin)
+    # TODO check for essencials columns
     df = add_column_filepath(df)
     df = add_column_duration(df)
     df = include_timestamp(df)
     df = include_cols_folders_structure(df)
    
+    # create descriptons.xlsx
     # df_description = create_df_description_without_folder(df)
     df_description = create_df_description_with_folder(df)
-    
     # input hashtag to mark blocks
-    df_description = implant_hashtag_blocks(df_description, 'Bloco')
+    df_description = implant_hashtag_blocks(df_description, 'Bloco', start_index_number)
     
-    df_description.to_excel('list.xlsx', index=False)
+    file_path_output = os.path.join(folder_path_output, 'descriptions.xlsx')
+    df_description.to_excel(file_path_output, index=False)
     
     # create summary.txt
-    create_summary()
+    create_summary(file_path_report_origin, folder_path_output, start_index_number)
     
     # TODO feature to expose folder hierarchies more than one level deep
     
     
-main()
+def main():
+    
+    folder_script_path_relative = os.path.dirname(__file__)
+    folder_script_path = os.path.realpath(folder_script_path_relative)
+    
+    file_path_report_origin = 'video_details.xlsx'
+    
+    # add start index number
+    print('Start hashtag index count with what value?')
+    start_index_number = input('(None for 1) Answer: ')
+    if start_index_number == '':
+        start_index_number = 1
+    else:
+        start_index_number = int(start_index_number)
+    
+    timestamp_link_maker(folder_script_path, file_path_report_origin, 
+                         start_index_number)
+
+
+if __name__ == "__main__":
+    main()
