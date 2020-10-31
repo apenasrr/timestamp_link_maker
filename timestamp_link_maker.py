@@ -7,6 +7,22 @@
     
     The required spreadsheet is automatically generated 
     by the app mass_videojoin: https://github.com/apenasrr/mass_videojoin
+
+    How to use  
+    If it's your first time using the tool  
+    1. Execute update_libs.bat  
+     For the next times  
+    2. Make sure the spreadsheet 'video_details.xlsx' is in the same folder as the script
+    3. Execute timestamp_link_maker.bat  
+    
+    Do you wish to buy a coffee to say thanks?  
+    LBC (from LBRY) digital Wallet  
+    > bFmGgebff4kRfo5pXUTZrhAL3zW2GXwJSX  
+
+    We recommend:  
+    mises.org - Educate yourself about economic and political freedom  
+    lbry.tv - Store files and videos on blockchain ensuring free speech  
+    https://www.activism.net/cypherpunk/manifesto.html -  How encryption is essential to Free Speech and Privacy  
 """
 
 import pandas as pd
@@ -14,8 +30,54 @@ import subprocess
 import datetime
 import time
 import os 
+import logging
 
 
+def logging_config():
+
+    logfilename = 'log-' + 'timestamp_link_maker' + '.txt'
+    logging.basicConfig(filename=logfilename, level=logging.DEBUG,
+                        format=' %(asctime)s-%(levelname)s-%(message)s')
+    # set up logging to console
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    # set a format which is simpler for console use
+    formatter = logging.Formatter(' %(asctime)s-%(levelname)s-%(message)s')
+    console.setFormatter(formatter)
+    # add the handler to the root logger
+    logging.getLogger('').addHandler(console)
+    logger = logging.getLogger(__name__)
+    
+
+def test_unknown_items(list_items, list_known_items, name_test):
+
+    new_items = []
+    for item in list_items:
+        if item not in list_known_items and item == item:
+            new_items.append(item)
+    if len(new_items) != 0:
+        if len(new_items) > 1:
+            str_items = ', '.join(new_items)
+        else:
+            str_items = new_items[0]
+        logging.info(f"Found {name_test} not known: {str_items}")
+        return False
+    else:
+        return True
+     
+
+def test_file_close(path_file):
+    
+    file_obj = open(path_file, "r+") 
+    try:
+        file_obj = open(path_file, "r+") 
+        file_obj.closed
+        return True
+    except IOError:
+        logging.error(f"\nCould not open file! Please close the file!\n{path_file}\n")
+        return False
+    
+    
 def get_length(filename):
 
     result = subprocess.run(["ffprobe", "-v", "error", "-show_entries",
@@ -238,11 +300,8 @@ def create_df_description_with_folder(df):
         
         description = ''
         # list of folders origin from the output file
-        # TODO replace comment below
         col_folder = cols_folders[0]
-        # col_folder = cols_folders[1]
         list_folders = list(df_video_details[col_folder].unique())
-        
         for index_folder, folder in enumerate(list_folders):
             mask_folder = df_video_details[col_folder].isin([folder])
             df_video_detail_folder = df_video_details.loc[mask_folder, :]
@@ -250,11 +309,10 @@ def create_df_description_with_folder(df):
                 description = folder
             else:
                 description = description + '\n\n' + folder
-                
             for index2, row in df_video_detail_folder.iterrows():
                 file_name_origin_seq = row['file_name_origin_seq']
                 description = description + '\n' + row['time_stamp_str'] + \
-                              ' ' + file_name_origin_seq   
+                              ' ' + file_name_origin_seq
         # check for size char limit in description
         if len(description) > 1000:
             df_output.loc[index, 'warning'] = 'max size reached'
@@ -360,9 +418,7 @@ def get_summary_mid_with_folder(df, keyword, add_num):
             
             
             # they are to the right of the column 'file_output'
-            # TODO uncoment line bellow
             step_column = 1
-            # step_column = 2
             col_number = list(df_folder.columns).index('file_output') + step_column
             # TODO iterate from col all cols of folders [col_number:]
             col_name = df_folder.columns[col_number]
@@ -450,14 +506,34 @@ def include_cols_folders_structure(df):
     
     return df_folder
 
-
+    
 def get_df_source(file_path_report_origin):
     
+    def test_columns_video_details(df_source, list_columns_keep):
+        # TODO check if columns exists in dataframe
+        list_known_items = df_source.columns
+        return_test_unknown_items = \
+            test_unknown_items(list_items=list_columns_keep, 
+                               list_known_items=list_known_items, 
+                               name_test='required columns')
+        if return_test_unknown_items is False:
+            logging.error(f'Possible cause: Second step in script ' + \
+                          f'"mass_videojoin" may have been skipped by accident')
+            return False
+        else:
+            return True
+        
+    if test_file_close(file_path_report_origin) is False:
+        return False
+        
     df_source = pd.read_excel(file_path_report_origin)
-    
+
     list_columns_keep = ['file_folder', 'file_name', 'file_folder_origin', 
                          'file_name_origin', 'file_output']
     
+    if test_columns_video_details(df_source, list_columns_keep) is False:
+        exit()
+                      
     df = df_source.loc[:, list_columns_keep]
     
     return df
@@ -488,6 +564,8 @@ def timestamp_link_maker(folder_path_output, file_path_report_origin,
         return df
     
     df = get_df_source(file_path_report_origin)
+    if df is False:
+        return False
     # TODO check for essencials columns
     df = add_column_filepath(df)
     df = add_column_duration(df)
@@ -529,4 +607,5 @@ def main():
 
 
 if __name__ == "__main__":
+    logging_config()
     main()
