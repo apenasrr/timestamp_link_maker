@@ -38,8 +38,12 @@ If the names of the current files and folders are the same as the original ones,
 
 
 ## How to use  
-1. Make sure the spreadsheet 'video_details.xlsx' is in the same folder as the script
-2. Execute timestamp_link_maker.py  
+If it's your first time using the tool  
+1. Execute update_libs.bat  
+
+For the next times  
+2. Make sure the spreadsheet 'video_details.xlsx' is in the same folder as the script
+3. Execute timestamp_link_maker.bat  
 
 ---
 Do you wish to buy a coffee to say thanks?  
@@ -49,3 +53,4 @@ LBC (from LBRY) digital Wallet
 ### We recommend:  
 [mises.org](https://mises.org/) - Educate yourself about economic and political freedom  
 [lbry.tv](http://lbry.tv/) - Store files and videos on blockchain ensuring free speech  
+[A Cypherpunk's Manifesto](https://www.activism.net/cypherpunk/manifesto.html) - How encryption is essential to Free Speech and Privacy  
