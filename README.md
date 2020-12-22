@@ -40,10 +40,11 @@ If the names of the current files and folders are the same as the original ones,
 ## How to use  
 If it's your first time using the tool  
 1. Execute update_libs.bat  
+2. If you wish a signature in every video block, edit the "config.txt" file
 
 For the next times  
-2. Make sure the spreadsheet 'video_details.xlsx' is in the same folder as the script
-3. Execute timestamp_link_maker.bat  
+3. Make sure the spreadsheet 'video_details.xlsx' is in the same folder as the script
+4. Execute timestamp_link_maker.bat  
 
 ---
 Do you wish to buy a coffee to say thanks?  

@@ -32,6 +32,11 @@ import time
 import os 
 import logging
 
+#Call for the user signature in the config.txt file
+txt = open('config.txt')
+line=txt.readline()
+variable_name, user_signature = line.split('=')
+
 
 def logging_config():
 
@@ -326,7 +331,7 @@ def create_df_description_with_folder(df):
     return df_output
         
 
-
+#implanting the timestamps and the signature in the blocks
 def implant_hashtag_blocks(df, keyword, add_num):
             
     df = df.reset_index(drop=True)
@@ -334,7 +339,7 @@ def implant_hashtag_blocks(df, keyword, add_num):
         description = row['description']
         counter = index+add_num
         df.loc[index, 'description'] = \
-            f'#{keyword}{counter:03d}\n\n{description}'
+            f'#{keyword}{counter:03d}\n\n{description}\n\n {user_signature}'
 
     return df
     
