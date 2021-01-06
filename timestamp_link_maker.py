@@ -331,7 +331,7 @@ def create_df_description_with_folder(df):
     return df_output
 
 
-def implant_hashtag_blocks(df, keyword, add_num):
+def description_implant_hashtag_blocks(df, keyword, add_num):
 
     df = df.reset_index(drop=True)
     for index, row in df.iterrows():
@@ -340,6 +340,25 @@ def implant_hashtag_blocks(df, keyword, add_num):
         df.loc[index, 'description'] = \
             f'#{keyword}{counter:03d}\n\n{description}'
 
+    return df
+
+
+def description_implant_signature_bottom(df):
+
+    def get_description_bot_content():
+
+        folder_script_path_relative = os.path.dirname(__file__)
+        folder_script_path = os.path.realpath(folder_script_path_relative)
+        file_path = os.path.join(folder_script_path, 'description_bot.txt')
+        description_bot_content = get_txt_content(file_path=file_path)
+        return description_bot_content
+
+    description_bot_content = get_description_bot_content()
+    df = df.reset_index(drop=True)
+    for index, row in df.iterrows():
+        description = row['description']
+        df.loc[index, 'description'] = \
+            f'{description}\n\n{description_bot_content}'
     return df
 
 
@@ -713,8 +732,12 @@ def timestamp_link_maker(folder_path_output, file_path_report_origin,
     df_description = create_df_description_with_folder(df)
 
     # input hashtag to mark blocks
-    df_description = implant_hashtag_blocks(df_description, 'Bloco',
-                                            start_index_number)
+    df_description = \
+        description_implant_hashtag_blocks(df_description, 'Bloco',
+                                           start_index_number)
+
+    # input signature in description bottom
+    df_description = description_implant_signature_bottom(df=df_description)
 
     # TODO: ask if user wish create new or update file.
     #       Impact both summary.txt and descriptions.xlsx
