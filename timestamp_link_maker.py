@@ -254,9 +254,10 @@ def create_df_description_with_folder(df):
         str_list_file_name_origin_seq = \
             ', '.join(list_file_name_origin_seq)
         logging.info(
-            'No internal folder identified. ' +
+            'It may not be a problem, ' +
+            'but no internal folder was identified. ' +
             'Check if the original files are ' +
-            'in the root folder.: ' +
+            'in the root project folder. If so, the behavior is normal: ' +
             f'"{file_output}: [{str_list_file_name_origin_seq}]"')
 
     # create column time_stamp_str
@@ -281,6 +282,11 @@ def create_df_description_with_folder(df):
       e.g.: filename_P01, filename_P02
     """
     df = sequencer_file_repeated(df, 'file_name_origin')
+
+    # fill columns file_output with file_path_output
+    # TODO: instead of filling, adapt code to work
+    #       with the file_path_output columns
+    df['file_output'] = df['file_path_output']
 
     # create dataframe description as df_output
     df_output = df.copy()
@@ -409,11 +415,20 @@ def create_summary(file_path_report_origin, folder_path_output,
 
 def get_txt_content(file_path):
 
-    file = open(file_path, 'r', encoding='utf-8')
+    list_encode = ['utf-8', 'ISO-8859-1'] # utf8, ansi
+    for encode in list_encode:
+        try:
+            file = open(file_path, 'r', encoding=encode)
+            file_content = file.readlines()
+            file_content = ''.join(file_content)
+            file.close()
+            return file_content
+        except:
+            continue
+
+    file = open(file_path, 'r', encoding=encode)
     file_content = file.readlines()
-    file_content = ''.join(file_content)
-    file.close()
-    return file_content
+    raise Exception('encode', f'Cannot open file: {file_path}')
 
 
 def create_txt(file_path, stringa):
@@ -597,7 +612,7 @@ def get_df_source(file_path_report_origin):
                                list_known_items=list_known_items,
                                name_test='required columns')
         if return_test_unknown_items is False:
-            logging.error('Possible cause: Second step in script ' +
+            logging.error('Possible cause: Reencode step in script ' +
                           '"mass_videojoin" may have been skipped by accident')
             return False
         else:
@@ -609,7 +624,7 @@ def get_df_source(file_path_report_origin):
     df_source = pd.read_excel(file_path_report_origin, engine='openpyxl')
 
     list_columns_keep = ['file_folder', 'file_name', 'file_folder_origin',
-                         'file_name_origin', 'file_output']
+                         'file_name_origin', 'file_output', 'file_path_output']
 
     if test_columns_video_details(df_source, list_columns_keep) is False:
         exit()
@@ -707,11 +722,6 @@ def timestamp_link_maker(folder_path_output, file_path_report_origin,
             df['duration'] = pd.to_timedelta(df['duration'])
         else:
             df['duration'] = df['file_path'].apply(get_duration_video)
-
-        # # reorder columns
-        # list_col_order = ['file_folder', 'file_name', 'file_folder_origin',
-        #                   'file_name_origin', 'file_output', 'duration']
-        # df = df.reindex(list_col_order, axis=1)
 
         return df
 
