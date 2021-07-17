@@ -591,11 +591,11 @@ def include_cols_folders_structure(df):
     """
     Includes to the right of the DataFrame, columns corresponding to each
      depth level of the folder structure of the origin files
-    :df: DataFrame. Requires column 'file_folder_origin'
+    :df: DataFrame. Requires column 'file_path_folder_origin'
     """
 
     skip_cols = len(df.columns)
-    df_folder = df['file_folder_origin'].str.split('\\', expand=True)
+    df_folder = df['file_path_folder_origin'].str.split('\\', expand=True)
     df_folder = df.merge(df_folder, left_index=True, right_index=True)
     # remove root folders columns (dont change along the files)
     df_folder = remove_root_folders(df_folder, skip_cols=skip_cols)
@@ -623,7 +623,9 @@ def get_df_source(file_path_report_origin):
 
     df_source = pd.read_excel(file_path_report_origin, engine='openpyxl')
 
-    list_columns_keep = ['file_folder', 'file_name', 'file_folder_origin',
+    # TODO: replace file_folder to file_path_folder
+    # TODO: replace file_folder_origin to file_path_folder_origin
+    list_columns_keep = ['file_path_folder', 'file_name', 'file_path_folder_origin',
                          'file_name_origin', 'file_output', 'file_path_output']
 
     if test_columns_video_details(df_source, list_columns_keep) is False:
@@ -684,7 +686,7 @@ def get_length(video_file_path):
 def timestamp_link_maker(folder_path_output, file_path_report_origin,
                          start_index_number):
     """    Requeriments: Spreadsheet named 'video_details.xlsx'
-     Required columns: ['file_folder', 'file_name', 'file_folder_origin',
+     Required columns: ['file_path_folder', 'file_name', 'file_path_folder_origin',
                         'file_name_origin', 'file_output']
      Optional columns: ['duration']
 
@@ -702,7 +704,7 @@ def timestamp_link_maker(folder_path_output, file_path_report_origin,
 
     def add_column_filepath(df):
 
-        df['file_path'] = df['file_folder'] + '\\' + df['file_name']
+        df['file_path'] = df['file_path_folder'] + '\\' + df['file_name']
 
         return df
 
