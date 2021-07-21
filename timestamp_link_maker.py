@@ -30,6 +30,7 @@ import subprocess
 import datetime
 import os
 import logging
+import utils_timestamp
 
 
 def logging_config():
@@ -45,35 +46,6 @@ def logging_config():
     console.setFormatter(formatter)
     # add the handler to the root logger
     logging.getLogger('').addHandler(console)
-
-
-def test_unknown_items(list_items, list_known_items, name_test):
-
-    new_items = []
-    for item in list_items:
-        if item not in list_known_items and item == item:
-            new_items.append(item)
-    if len(new_items) != 0:
-        if len(new_items) > 1:
-            str_items = ', '.join(new_items)
-        else:
-            str_items = new_items[0]
-        logging.info(f"Found {name_test} not known: {str_items}")
-        return False
-    else:
-        return True
-
-
-def test_file_close(path_file):
-
-    try:
-        file_obj = open(path_file, "r+")
-        file_obj.closed
-        return True
-    except IOError:
-        logging.error("\nCould not open file! " +
-                      f"Please close the file!\n{path_file}\n")
-        return False
 
 
 def include_timestamp(df):
@@ -299,8 +271,8 @@ def create_df_description_with_folder(df):
     for index, row in df_output.iterrows():
         file_output = row['file_output']
         mask_file_output = df['file_output'].isin([file_output])
-        cols_df_video_details = ['file_name_origin_seq', 'time_stamp_str'] + \
-                                cols_folders
+        cols_df_video_details = (['file_name_origin_seq', 'time_stamp_str'] +
+                                 cols_folders)
         df_video_details = df.loc[mask_file_output, cols_df_video_details]
         df_video_details = df_video_details.reset_index()
 
@@ -322,8 +294,8 @@ def create_df_description_with_folder(df):
                 description = description + '\n\n' + folder
             for _, row in df_video_detail_folder.iterrows():
                 file_name_origin_seq = row['file_name_origin_seq']
-                description = description + '\n' + row['time_stamp_str'] + \
-                              ' ' + file_name_origin_seq
+                description = (description + '\n' + row['time_stamp_str'] +
+                               ' ' + file_name_origin_seq)
         # check for size char limit in description
         if len(description) > 1000:
             df_output.loc[index, 'warning'] = 'max size reached'
@@ -337,14 +309,14 @@ def create_df_description_with_folder(df):
     return df_output
 
 
-def description_implant_hashtag_blocks(df, keyword, add_num):
+def description_implant_hashtag_blocks(df, hashtag_index, add_num):
 
     df = df.reset_index(drop=True)
     for index, row in df.iterrows():
         description = row['description']
         counter = index+add_num
         df.loc[index, 'description'] = \
-            f'#{keyword}{counter:03d}\n\n{description}'
+            f'#{hashtag_index}{counter:03d}\n\n{description}'
 
     return df
 
@@ -381,14 +353,27 @@ def get_summary_mid_without_folder(df, keyword):
     return mid
 
 
-def create_summary(file_path_report_origin, folder_path_output,
-                   start_index_number):
+def create_summary(file_path_report_origin: str, folder_path_output: str,
+                   start_index_number: int, dict_summary: dict = {},
+                   hashtag_index: str = 'block'):
+    """create summary.txt
 
-    folder_script_path_relative = os.path.dirname(__file__)
-    folder_script_path = os.path.realpath(folder_script_path_relative)
+    Args:
+        file_path_report_origin (str): absolute spreadsheet path.
+        folder_path_output (str): Absolute path of the folder where
+                                   the file will be generated
+        start_index_number (int): Initial index number at which the video
+                                   summary and description should start
+        dict_summary (dict, optional): file_path of txts with text to be insert
+            on top and bottom of output file summary.txt. Defaults to {}.
+            keys: [path_summary_top, path_summary_bot]
+    """
 
-    file_path = os.path.join(folder_script_path, 'summary_top.txt')
-    summary_top_content = get_txt_content(file_path=file_path)
+    # folder_script_path_relative = os.path.dirname(__file__)
+    # folder_script_path = os.path.realpath(folder_script_path_relative)
+
+    path_summary_top = dict_summary['path_summary_top']
+    summary_top_content = get_txt_content(file_path=path_summary_top)
 
     df = pd.read_excel(file_path_report_origin, engine='openpyxl')
     int_skip_cols = len(df.columns)
@@ -398,16 +383,17 @@ def create_summary(file_path_report_origin, folder_path_output,
 
     summary_mid_content = \
         get_summary_mid_with_folder(
-            df, keyword='Bloco',
+            df,
+            folder_col=int_col_position_folder_structure,
             start_index_number=start_index_number,
-            folder_col=int_col_position_folder_structure)
+            hashtag_index=hashtag_index,)
 
-    file_path = os.path.join(folder_script_path, 'summary_bot.txt')
-    summary_bot_content = get_txt_content(file_path=file_path)
+    path_summary_bot = dict_summary['path_summary_bot']
+    summary_bot_content = get_txt_content(file_path=path_summary_bot)
 
-    summary_content = summary_top_content + '\n' + \
-                      summary_mid_content + '\n' + \
-                      summary_bot_content
+    summary_content = (summary_top_content + '\n' +
+                       summary_mid_content + '\n' +
+                       summary_bot_content)
 
     file_path = os.path.join(folder_path_output, 'summary.txt')
     create_txt(file_path=file_path, stringa=summary_content)
@@ -415,7 +401,7 @@ def create_summary(file_path_report_origin, folder_path_output,
 
 def get_txt_content(file_path):
 
-    list_encode = ['utf-8', 'ISO-8859-1'] # utf8, ansi
+    list_encode = ['utf-8', 'ISO-8859-1']  # utf8, ansi
     for encode in list_encode:
         try:
             file = open(file_path, 'r', encoding=encode)
@@ -438,7 +424,8 @@ def create_txt(file_path, stringa):
     f.close()
 
 
-def get_summary_mid_with_folder(df, keyword, folder_col, start_index_number):
+def get_summary_mid_with_folder(df, folder_col, start_index_number: int = 1,
+                                hashtag_index: str = 'Block'):
     """Create text file, marking the output files with hashtag ref string
         and informing above, the your folder structure that originate each one
 
@@ -458,7 +445,8 @@ def get_summary_mid_with_folder(df, keyword, folder_col, start_index_number):
     Args:
         df (dataframe): required columns:
                             'file_output', listing absolute path file
-        keyword (str): prefix to mark each topic in summary, like: 'Block'
+        hashtag_index (str): prefix to mark each topic in summary,
+                              like: 'Block'
         folder_col (int): column number position where
                           'folder depth level columns' start
         start_index_number (int): Initial index number at which the video
@@ -530,7 +518,7 @@ def get_summary_mid_with_folder(df, keyword, folder_col, start_index_number):
             str_folders = '\n'.join(list_folders)
 
             index_hashtag = index + start_index_number
-            str_mark = f'#{keyword}%03d' % (index_hashtag)
+            str_mark = f'#{hashtag_index}%03d' % (index_hashtag)
 
             if index == 0:
                 mid = str_folders + '\n' + str_mark
@@ -605,12 +593,14 @@ def include_cols_folders_structure(df):
 def get_df_source(file_path_report_origin):
 
     def test_columns_video_details(df_source, list_columns_keep):
-        # TODO: check if columns exists in dataframe
+
+        # check if columns exists in dataframe
         list_known_items = df_source.columns
         return_test_unknown_items = \
-            test_unknown_items(list_items=list_columns_keep,
-                               list_known_items=list_known_items,
-                               name_test='required columns')
+            utils_timestamp.test_unknown_items(
+                list_items=list_columns_keep,
+                list_known_items=list_known_items,
+                name_test='required columns')
         if return_test_unknown_items is False:
             logging.error('Possible cause: Reencode step in script ' +
                           '"mass_videojoin" may have been skipped by accident')
@@ -618,15 +608,17 @@ def get_df_source(file_path_report_origin):
         else:
             return True
 
-    if test_file_close(file_path_report_origin) is False:
+    if utils_timestamp.test_file_close(file_path_report_origin) is False:
         return False
 
     df_source = pd.read_excel(file_path_report_origin, engine='openpyxl')
 
     # TODO: replace file_folder to file_path_folder
     # TODO: replace file_folder_origin to file_path_folder_origin
-    list_columns_keep = ['file_path_folder', 'file_name', 'file_path_folder_origin',
-                         'file_name_origin', 'file_output', 'file_path_output']
+    list_columns_keep = ['file_path_folder', 'file_name',
+                         'file_path_folder_origin',
+                         'file_name_origin',
+                         'file_output', 'file_path_output']
 
     if test_columns_video_details(df_source, list_columns_keep) is False:
         exit()
@@ -658,9 +650,6 @@ def get_duration_video(path_file):
         datetime.timedelta(microseconds=duration_delta.microseconds)
     duration_format = duration_delta - duration_delta_micro
 
-    # log_message = f"{path_file}\nDuration: {duration_format}\n"
-    # logging.info(log_message)
-
     return duration_format
 
 
@@ -684,22 +673,31 @@ def get_length(video_file_path):
 
 
 def timestamp_link_maker(folder_path_output, file_path_report_origin,
-                         start_index_number):
-    """    Requeriments: Spreadsheet named 'video_details.xlsx'
-     Required columns: ['file_path_folder', 'file_name', 'file_path_folder_origin',
-                        'file_name_origin', 'file_output']
-     Optional columns: ['duration']
+                         start_index_number, hashtag_index: str = 'Block',
+                         dict_summary={}):
+    """
+    From spreadsheet video data, create timestamps, Generating 2 files:
+        summary.txt: Containing a summary, adding all videos hashtags_link
+                        grouped by name of the first level folders
+        descriptions.xlsx: With columns: file_output, description, warning
+    About required spreadsheet:
+    - can be automatically generated by the app mass_videojoin:
+        https://github.com/apenasrr/mass_videojoin
 
-    The required spreadsheet is automatically generated
-    by the app mass_videojoin: https://github.com/apenasrr/mass_videojoin
+    - Required columns: ['file_path_folder', 'file_name',
+                         'file_path_folder_origin',
+                         'file_name_origin', 'file_output']
+    - Optional columns: ['duration']
 
     Args:
         folder_path_output (str): Absolute path of the folder where
                                    the files are to be generated
-        file_path_report_origin (str): absolute worksheet path
-                                        named 'video_details.xlsx'
+        file_path_report_origin (str): absolute spreadsheet path.
         start_index_number (int): Initial index number at which the video
                                    summary and description should start
+        dict_summary (dict, optional): file_path of txts with text to be insert
+            on top and bottom of output file summary.txt. Defaults to {}.
+            keys: [path_summary_top, path_summary_bot]
     """
 
     def add_column_filepath(df):
@@ -739,49 +737,58 @@ def timestamp_link_maker(folder_path_output, file_path_report_origin,
 
     df = include_cols_folders_structure(df)
 
-    # #create descriptons.xlsx
-    # df_description = create_df_description_without_folder(df)
+    # create descriptons.xlsx
+    # # df_description = create_df_description_without_folder(df)
     df_description = create_df_description_with_folder(df)
 
-    # input hashtag to mark blocks
+    # # input hashtag to mark blocks
     df_description = \
-        description_implant_hashtag_blocks(df_description, 'Bloco',
+        description_implant_hashtag_blocks(df_description, hashtag_index,
                                            start_index_number)
 
-    # input signature in description bottom
+    # # input signature in description bottom
     df_description = description_implant_signature_bottom(df=df_description)
 
     # TODO: ask if user wish create new or update file.
     #       Impact both summary.txt and descriptions.xlsx
 
-    # save descriptions.xlsx
+    # # save descriptions.xlsx
     file_path_output = os.path.join(folder_path_output, 'descriptions.xlsx')
     df_description.to_excel(file_path_output, index=False)
 
     # create summary.txt
     create_summary(file_path_report_origin, folder_path_output,
-                   start_index_number)
+                   start_index_number, dict_summary, hashtag_index)
 
     # TODO: feature to expose folder hierarchies more than one level deep
 
 
 def main():
 
+    # get dict config_data
     folder_script_path_relative = os.path.dirname(__file__)
     folder_script_path = os.path.realpath(folder_script_path_relative)
+    path_file_config = os.path.join(folder_script_path, 'config.ini')
+    config_data = utils_timestamp.get_config_data(path_file_config)
 
-    file_path_report_origin = 'video_details.xlsx'
+    # set variables
+    path_folder_output = config_data['path_folder_output']
+    path_file_report = config_data['path_file_report']
+    path_summary_top = config_data['path_summary_top']
+    path_summary_bot = config_data['path_summary_bot']
+    start_index = int(config_data['start_index'])
+    hashtag_index = config_data['hashtag_index']
+    dict_summary = {}
+    dict_summary['path_summary_top'] = path_summary_top
+    dict_summary['path_summary_bot'] = path_summary_bot
 
-    # add start index number
-    print('Start hashtag index count with what value?')
-    start_index_number = input('(None for 1) Answer: ')
-    if start_index_number == '':
-        start_index_number = 1
-    else:
-        start_index_number = int(start_index_number)
+    # ensure folder_output existence
+    utils_timestamp.ensure_folder_existence([path_folder_output])
 
-    timestamp_link_maker(folder_script_path, file_path_report_origin,
-                         start_index_number)
+    # TODO: ensure aux files existence
+
+    timestamp_link_maker(path_folder_output, path_file_report,
+                         start_index, hashtag_index, dict_summary)
 
 
 if __name__ == "__main__":
