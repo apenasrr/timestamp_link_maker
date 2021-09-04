@@ -529,13 +529,35 @@ def get_summary_mid_with_folder(df, folder_col, start_index_number: int = 1,
     # get file_output unique values
     list_file_output = df['file_output'].unique()
     dict_file_folders = get_dict_file_folders(list_file_output, df, folder_col)
-    summary_mid_content = \
+    summary_mid_content_raw = \
         get_summary_mid_content_with_folders(
             list_file_output=list_file_output,
             dict_file_folders=dict_file_folders,
             start_index_number=start_index_number)
 
+    summary_mid_content = summary_compact(summary_mid_content_raw)
+
     return summary_mid_content
+
+
+def summary_compact(stringa):
+
+    new_stringa = stringa.strip('\n').split('\n')
+    d = {}
+    for index, line in enumerate(new_stringa):
+        if line == '':
+            continue
+        if line[0] != '#':
+            value_next_line = new_stringa[index+1]
+            try:
+                d[line] = d[line] + "; " + value_next_line
+            except:
+                d[line] = value_next_line
+
+    stringa_output = ''
+    for key, value in d.items():
+        stringa_output = stringa_output + '\n' + key + '\n' + value + '\n'
+    return stringa_output
 
 
 def remove_root_folders(df, skip_cols):
