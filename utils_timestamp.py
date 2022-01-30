@@ -1,6 +1,31 @@
-from configparser import ConfigParser
 import logging
 import os
+from configparser import ConfigParser
+
+import pandas as pd
+
+
+def check_descriptions_warning(folder_path_project):
+
+    df_description = get_df_description(folder_path_project)
+    return check_descriptions_warning_from_df(df_description)
+
+
+def check_descriptions_warning_from_df(df):
+
+    if 'max size reached' in df['warning'].unique():
+        return True
+    else:
+        return False
+
+
+def get_df_description(folder_path_output):
+
+    # fmt: off
+    path_file_description = os.path.join(folder_path_output,
+                                         "descriptions.xlsx")
+    df_desc = pd.read_excel(path_file_description, engine="openpyxl")
+    return df_desc
 
 
 def ensure_folder_existence(folders_path):
@@ -23,7 +48,7 @@ def get_config_data(path_file_config):
 
     config_file = ConfigParser()
     config_file.read(path_file_config)
-    default_config = dict(config_file['default'])
+    default_config = dict(config_file["default"])
     return default_config
 
 
@@ -35,7 +60,7 @@ def test_unknown_items(list_items, list_known_items, name_test):
             new_items.append(item)
     if len(new_items) != 0:
         if len(new_items) > 1:
-            str_items = ', '.join(new_items)
+            str_items = ", ".join(new_items)
         else:
             str_items = new_items[0]
         logging.info(f"Found {name_test} not known: {str_items}")
