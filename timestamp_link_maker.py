@@ -736,7 +736,7 @@ def timestamp_link_maker(
     start_index_number,
     hashtag_index: str = "Block",
     dict_summary={},
-):
+    descriptions_auto_adapt=True,):
     """
     From spreadsheet video data, create timestamps, Generating 2 files:
         summary.txt: Containing a summary, adding all videos hashtags_link
@@ -760,6 +760,9 @@ def timestamp_link_maker(
         dict_summary (dict, optional): file_path of txts with text to be insert
             on top and bottom of output file summary.txt. Defaults to {}.
             keys: [path_summary_top, path_summary_bot]
+        descriptions_auto_adapt (bool, optional): (
+            True for auto-adapt description to max length of 999 chars
+        )
     """
 
     def add_column_filepath(df):
@@ -811,9 +814,24 @@ def timestamp_link_maker(
     # # input signature in description bottom
     df_description = description_implant_signature_bottom(df=df_description)
 
-    # # save descriptions.xlsx
+    # save descriptions.xlsx
     file_path_output = os.path.join(folder_path_output, "descriptions.xlsx")
     df_description.to_excel(file_path_output, index=False)
+
+    # Check if has warning
+    # fmt: off
+    has_warning = \
+        utils_timestamp.check_descriptions_warning_from_df(df_description)
+    if has_warning:
+        if descriptions_auto_adapt:
+            df_description = \
+                utils_timestamp.adapt_description_to_limit(df_description)
+            df_description.to_excel(file_path_output, index=False)
+        else:
+            print('\nThere are warnings in the file "descriptions.xlsx"')
+
+
+
 
     # create summary.txt
     create_summary(
@@ -826,12 +844,7 @@ def timestamp_link_maker(
 
     # TODO: feature to expose folder hierarchies more than one level deep
 
-    # Check if has warning
-    # fmt: off
-    has_warning = \
-        utils_timestamp.check_descriptions_warning_from_df(df_description)
-    if has_warning:
-        print('\nThere are alerts in the file "descriptions.xlsx"')
+
 
 
 def main():
@@ -849,9 +862,17 @@ def main():
     path_summary_bot = config_data["path_summary_bot"]
     start_index = int(config_data["start_index"])
     hashtag_index = config_data["hashtag_index"]
+
+    descriptions_auto_adapt_str = config_data["descriptions_auto_adapt"]
+    if descriptions_auto_adapt_str == 'true':
+        descriptions_auto_adapt = True
+    else:
+        descriptions_auto_adapt = False
+
     dict_summary = {}
     dict_summary["path_summary_top"] = path_summary_top
     dict_summary["path_summary_bot"] = path_summary_bot
+
 
     # ensure folder_output existence
     utils_timestamp.ensure_folder_existence([path_folder_output])
@@ -862,7 +883,8 @@ def main():
                          path_file_report,
                          start_index,
                          hashtag_index,
-                         dict_summary)
+                         dict_summary,
+                         descriptions_auto_adapt)
 
 
 if __name__ == "__main__":
