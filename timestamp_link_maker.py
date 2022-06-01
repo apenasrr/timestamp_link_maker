@@ -270,11 +270,6 @@ def create_df_description_with_folder(df):
     """
     df = sequencer_file_repeated(df, "file_name_origin")
 
-    # fill columns file_output with file_path_output
-    # TODO: instead of filling, adapt code to work
-    #       with the file_path_output columns
-    df["file_output"] = df["file_path_output"]
-
     # create dataframe description as df_output
     df_output = df.copy()
     cols_keep = ["file_name_origin", "file_output", "duration", "head_file"]
@@ -665,8 +660,7 @@ def get_df_source(file_path_report_origin):
         "file_name",
         "file_path_folder_origin",
         "file_name_origin",
-        "file_output",
-        "file_path_output",
+        "file_output"
     ]
 
     if test_columns_video_details(df_source, list_columns_keep) is False:
