@@ -631,7 +631,7 @@ def include_cols_folders_structure(df):
     return df_folder
 
 
-def get_df_source(file_path_report_origin):
+def get_df_source(file_path_report_origin, list_columns_keep=None):
     def test_columns_video_details(df_source, list_columns_keep):
 
         # check if columns exists in dataframe
@@ -655,13 +655,14 @@ def get_df_source(file_path_report_origin):
 
     df_source = pd.read_excel(file_path_report_origin, engine="openpyxl")
 
-    list_columns_keep = [
-        "file_path_folder",
-        "file_name",
-        "file_path_folder_origin",
-        "file_name_origin",
-        "file_output"
-    ]
+    if list_columns_keep is None:
+        list_columns_keep = [
+            "file_path_folder",
+            "file_name",
+            "file_path_folder_origin",
+            "file_name_origin",
+            "file_output"
+        ]
 
     if test_columns_video_details(df_source, list_columns_keep) is False:
         exit()
